@@ -47,15 +47,8 @@ def hello_world():
     threading.Thread(target=check_login).start()
     return response
 
-@app.route("/redirect")
-def redirect_to_logged_in():
-    if session.get("logged_in"):
-        return redirect(url_for("logged_in"))
-    else:
-        print("Not logged in")
-        return "Not logged in"
-
-
 @app.route("/logged-in")
 def logged_in():
-    return "<p>Ur in...</p>"
+    if session.get("logged_in"):
+        return "<p>Ur in...</p>"
+    return "<p>U aint in bro...</p>"
