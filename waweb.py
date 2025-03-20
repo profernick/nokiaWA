@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template,redirect,url_for
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import base64
+import threading
 
 user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 chrome_options = webdriver.ChromeOptions()
@@ -30,9 +31,31 @@ def login():
     with open("static/images/qrcode.png", "wb") as f:
         f.write(canvas_png)
 
-login()
-
 app = Flask(__name__)
+session = {"logged_in": False}
+
+def check_login():
+    if WebDriverWait(driver,60).until(EC.presence_of_element_located((By.CSS_SELECTOR, "[aria-label='Chats']"))):
+        print("hey it works")
+        session["logged_in"] = True
+
 @app.route("/login")
 def hello_world():
-    return render_template('qr.html')
+    # by the time this is called its already fully loaded, thats why speed
+    login()
+    response = render_template('qr.html')
+    threading.Thread(target=check_login).start()
+    return response
+
+@app.route("/redirect")
+def redirect_to_logged_in():
+    if session.get("logged_in"):
+        return redirect(url_for("logged_in"))
+    else:
+        print("Not logged in")
+        return "Not logged in"
+
+
+@app.route("/logged-in")
+def logged_in():
+    return "<p>Ur in...</p>"
