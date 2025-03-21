@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chats</title>
+</head>
+<body>
+    <h4>Ray</h4>
+    <a href="">Refresh</a>
+    <ul>
+        {% for contact in contacts %}
+            <b>{{ contact }}</b>
+            {% for msg in latest %}
+                <p>{{ msg }}</p>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</body>
+</html>
+
