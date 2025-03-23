@@ -59,7 +59,8 @@ def chats():
     load_chats = driver.execute_script("window.Store = Object.assign({}, window.require('WAWebCollections'));")
 
     contacts = driver.execute_script("return window.Store.Chat.map(contacts => contacts.formattedTitle);")
-
+    
     latest_msg = driver.execute_script("return window.Store.Chat._models.flatMap(chatd => window.Store.Chat.get(chatd.id._serialized).msgs._models.slice(-1).map(msg => msg.body));")
-
-    return render_template("chats.html", contacts=contacts, latest=latest_msg)
+    
+    contact_msg = dict(zip(contacts,latest_msg))
+    return render_template("chats.html", contactmsg=contact_msg)

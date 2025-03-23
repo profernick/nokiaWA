@@ -9,11 +9,10 @@
     <h4>Ray</h4>
     <a href="">Refresh</a>
     <ul>
-        {% for contact in contacts %}
-            <b>{{ contact }}</b>
-            {% for msg in latest %}
-                <p>{{ msg }}</p>
-            {% endfor %}
+        {% for c,msg in contactmsg.items() %}
+			<b>{{ c }}</b>
+			<p>{{ msg }}</p>
+			<hr>
         {% endfor %}
     </ul>
 </body>
