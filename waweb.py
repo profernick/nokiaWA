@@ -1,4 +1,4 @@
-from flask import Flask, render_template,redirect,url_for
+from flask import Flask, render_template,redirect,url_for,request
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -64,3 +64,29 @@ def chats():
     
     contact_msg = dict(zip(contacts,latest_msg))
     return render_template("chats.html", contactmsg=contact_msg)
+
+@app.route("/processnum", methods=['POST'])
+def process_num():
+    contacts = driver.execute_script("return window.Store.Chat.map(contacts => contacts.formattedTitle);")
+    contact_num = driver.execute_script("return window.Store.Chat.map(contacts => contacts.id._serialized);")
+
+    name_num = dict(zip(contacts,contact_num))
+    
+    num = request.form.get("contact")
+
+    return redirect(url_for("chat_session", num=name_num.get(num)))
+
+@app.route("/chatsession")
+def chat_session():
+    num = request.args.get("num", None)
+    if num is None:
+        return "<p>No chats available</p>"
+    
+    # get all chats of num here and display
+    driver.execute_script(f"document.chat = window.Store.Chat.get('{num}');")
+    driver.execute_script("window.Store.ConversationMsgs = window.require('WAWebChatLoadMessages');")
+    driver.execute_script("document.msgdata = await window.Store.ConversationMsgs.loadEarlierMsgs(document.chat);")
+    messages = driver.execute_script("return document.msgdata.map(msg => msg.body);")
+    print(messages)
+    print(type(messages))
+    return render_template("messages.html", messages=messages)

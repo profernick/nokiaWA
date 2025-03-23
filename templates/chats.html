@@ -10,9 +10,14 @@
     <a href="">Refresh</a>
     <ul>
         {% for c,msg in contactmsg.items() %}
-			<b>{{ c }}</b>
-			<p>{{ msg }}</p>
-			<hr>
+            <form action="/processnum" method="POST">
+                <input type="hidden" name="contact" value="{{ c }}">
+                <button type="submit" style="border: none; background: none; padding: 0; cursor: pointer;">
+                    <b>{{ c }}</b>
+                </button>
+            </form>
+            <p>{{ msg }}</p>
+            <hr>
         {% endfor %}
     </ul>
 </body>
