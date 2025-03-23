@@ -4,8 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messages</title>
+    <style>
+        .rectangular-input {
+            width: 400px;
+            height: 80px;
+            font-size: 16px;
+            padding: 2px;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+    </style>
 </head>
 <body>
+    <form action="/send" method="POST">
+        <input type="hidden" name="num" value="{{ num }}">
+        <input type="text" name="sendbox" class="rectangular-input" placeholder="Type here...">
+        <button type="submit">Send</button>
+    </form>
     {% for msg in messages %}
         <p>{{ msg }}</p>
     {% endfor %}

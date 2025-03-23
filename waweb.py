@@ -31,6 +31,39 @@ def login():
     with open("static/images/qrcode.png", "wb") as f:
         f.write(canvas_png)
 
+def load_send():
+    driver.execute_script("window.Store.User = window.require('WAWebUserPrefsMeUser');")
+    driver.execute_script("window.Store.MsgKey = window.require('WAWebMsgKey');")
+    driver.execute_script("window.Store.SendMessage = window.require('WAWebSendMsgChatAction');")
+
+def send_message(ids,response):
+    driver.execute_script(f"document.chat = window.Store.Chat.get('{ids}');")
+    driver.execute_script("document.meUser = window.Store.User.getMaybeMeUser();")
+    driver.execute_script("document.newId = await window.Store.MsgKey.newId();")
+    driver.execute_script("""document.newMsgId = new window.Store.MsgKey({
+        from: document.meUser,
+        to: document.chat.id,
+        id: document.newId,
+        participant: document.chat.id.isGroup() ? document.meUser : undefined,
+        selfDir: 'out',
+    });""")
+
+    driver.execute_script(f"""document.message = {{
+        id: document.newMsgId,
+        ack: 0,
+        body: "{response}",
+        from: document.meUser,
+        to: document.chat.id,
+        local: true,
+        self: 'out',
+        t: parseInt(new Date().getTime() / 1000),
+        isNewMsg: true,
+        type: 'chat',
+    }};""")
+
+    driver.execute_script("window.Store.SendMessage.addAndSendMsgToChat(document.chat, document.message)")
+
+
 app = Flask(__name__)
 session = {"logged_in": False}
 
@@ -62,6 +95,7 @@ def chats():
     
     latest_msg = driver.execute_script("return window.Store.Chat._models.flatMap(chatd => window.Store.Chat.get(chatd.id._serialized).msgs._models.slice(-1).map(msg => msg.body));")
     
+    load_send()
     contact_msg = dict(zip(contacts,latest_msg))
     return render_template("chats.html", contactmsg=contact_msg)
 
@@ -89,4 +123,11 @@ def chat_session():
     messages = driver.execute_script("return document.msgdata.map(msg => msg.body);")
     print(messages)
     print(type(messages))
-    return render_template("messages.html", messages=messages)
+    return render_template("messages.html", messages=messages, num=num)
+
+@app.route("/send", methods=['POST'])
+def send():
+    msg_to_send = request.form.get("sendbox")
+    num = request.form.get("num")
+    send_message(num,msg_to_send)
+    return redirect(url_for("chat_session", num=num))
