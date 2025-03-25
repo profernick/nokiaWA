@@ -2,15 +2,15 @@
 
 An attempt to have Whatsapp on old Nokia phones
 
+Self Host this please, for your own safety
 
 
 
-## Acknowledgements
+## Dependencies
 
- - [Whatsapp-Web.js for the snippets](https://github.com/pedroslopez/whatsapp-web.js/)
- - [Mpgram for the UI inspiration](https://github.com/shinovon/mpgram-web)
-
-
+- Python
+- Flask
+- Selenium
 ## Usage
 
 ```
@@ -33,4 +33,9 @@ Currently a very early version of the program, lack of features but you can send
 - And more...
 
 Feel free to contribute :)
+
+## Credits
+
+ - [Whatsapp-Web.js for the snippets](https://github.com/pedroslopez/whatsapp-web.js/)
+ - [Mpgram for the UI inspiration](https://github.com/shinovon/mpgram-web)  
 
