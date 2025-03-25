@@ -21,10 +21,10 @@
         <input type="text" name="sendbox" class="rectangular-input" placeholder="Type here...">
         <button type="submit">Send</button>
     </form>
-    {% for msg in messages %}
+    {% for who,msg,t in who_msg_t %}
+        <b>{{ who }}&nbsp;&nbsp;&nbsp;{{ t }}</b>
         <p>{{ msg }}</p>
     {% endfor %}
-    </ul>
 </body>
 </html>
 

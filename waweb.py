@@ -5,6 +5,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from datetime import datetime
+import time
 import base64
 import threading
 
@@ -63,6 +65,10 @@ def send_message(ids,response):
 
     driver.execute_script("window.Store.SendMessage.addAndSendMsgToChat(document.chat, document.message)")
 
+def load_msg(num):
+    driver.execute_script(f"document.chat = window.Store.Chat.get('{num}');")
+    driver.execute_script("window.Store.ConversationMsgs = window.require('WAWebChatLoadMessages');")
+    driver.execute_script("await window.Store.ConversationMsgs.loadEarlierMsgs(document.chat);")
 
 app = Flask(__name__)
 session = {"logged_in": False}
@@ -117,13 +123,25 @@ def chat_session():
         return "<p>No chats available</p>"
     
     # get all chats of num here and display
-    driver.execute_script(f"document.chat = window.Store.Chat.get('{num}');")
-    driver.execute_script("window.Store.ConversationMsgs = window.require('WAWebChatLoadMessages');")
-    driver.execute_script("document.msgdata = await window.Store.ConversationMsgs.loadEarlierMsgs(document.chat);")
-    messages = driver.execute_script("return document.msgdata.map(msg => msg.body);")
-    print(messages)
-    print(type(messages))
-    return render_template("messages.html", messages=messages, num=num)
+    load_msg(num)
+    msgdata = driver.execute_script(f"""return document.msgdata = window.Store.Chat.get('{num}').msgs._models.map(m => ({{
+        body: m.body,
+        timestamp: m.t,
+        from: m.from,
+    }}));""")
+    messages = [msg["body"] for msg in msgdata]
+    who = driver.execute_script("return document.msgdata.map(msg => msg.from._serialized).map(num => window.Store.Contact.get(num).name);")
+    time = [datetime.fromtimestamp(timestamp["timestamp"]).time().strftime("%H:%M") for timestamp in msgdata]
+
+    messages.reverse()
+    who.reverse()
+    time.reverse()
+
+    who_msg_t = list(zip(who,messages,time))
+
+    print(who_msg_t)
+
+    return render_template("messages.html", who_msg_t=who_msg_t, num=num)
 
 @app.route("/send", methods=['POST'])
 def send():
