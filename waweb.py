@@ -89,7 +89,6 @@ def hello_world():
 @app.route("/logged-in")
 def logged_in():
     if session.get("logged_in"):
-        # continue this, instead of only displaying ur in, start displaying chats!
         return "<p>Ur in...</p>"
     return "<p>U aint in bro...</p>"
 
@@ -103,7 +102,10 @@ def chats():
     
     load_send()
     contact_msg = dict(zip(contacts,latest_msg))
-    return render_template("chats.html", contactmsg=contact_msg)
+    
+    yourname = driver.execute_script("return window.Store.Contact.get(window.Store.User.getMeUser()._serialized).name")
+
+    return render_template("chats.html", contactmsg=contact_msg, yourname=yourname)
 
 @app.route("/processnum", methods=['POST'])
 def process_num():
