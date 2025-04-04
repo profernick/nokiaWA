@@ -1,4 +1,4 @@
-from flask import Flask, render_template,redirect,url_for,request
+from flask import Flask, render_template,redirect,url_for,request, Response
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -10,6 +10,7 @@ import time
 import base64
 import threading
 import os
+import ast
 
 user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 chrome_options = webdriver.ChromeOptions()
@@ -22,6 +23,7 @@ chrome_options.add_argument(f'user-agent={user_agent}')
 driver = webdriver.Chrome(options=chrome_options)
 driver.get("https://web.whatsapp.com/")
 
+media_download = {}
 def login():
     WebDriverWait(driver,30).until(EC.presence_of_element_located((By.TAG_NAME, 'canvas')))
 
@@ -86,8 +88,6 @@ def decrypt_media(msg):
 	    signal: (new AbortController).signal
     }}) }} catch(e) {{ if(e.status && e.status == 404) document.decryptedMedia = undefined }};""")
     
-
-    #base64str = driver.execute_script("return document.base64str = await btoa(String.fromCharCode.apply(null, new Uint8Array(document.decryptedMedia)));")
     
     driver.execute_script("""document.base64str = (arrayBuffer) =>
         new Promise((resolve, reject) => {
@@ -106,14 +106,7 @@ def decrypt_media(msg):
     base64str = driver.execute_script("if(document.decryptedMedia != undefined) return await document.base64str(document.decryptedMedia)")
 
     return base64str
-
-def check64(s):
-    try:
-        if s.startswith("/9j/"):
-            return True
-    except Exception:
-        return False
-
+    
 app = Flask(__name__)
 session = {"logged_in": False}
 
@@ -142,14 +135,13 @@ def chats():
     driver.execute_script("window.Store.DownloadManager = window.require('WAWebDownloadManager').downloadManager;")
     contacts = driver.execute_script("return window.Store.Chat.map(contacts => contacts.formattedTitle);")
     
-    #latest_msg = driver.execute_script("return window.Store.Chat._models.flatMap(chatd => window.Store.Chat.get(chatd.id._serialized).msgs._models.slice(-1).map(msg => msg.body));")
-    
     all_l_msg = []
     latest_msg = driver.execute_script("""return window.Store.Chat._models.flatMap(chatd => window.Store.Chat.get(chatd.id._serialized).msgs._models.slice(-1).map(m => (    {
         body: m.body,
         timestamp: m.t,
         from: m.from,
         type: m.type,
+        caption: m.caption || "",
 	    directPath: m.directPath,
 	    encFilehash: m.encFilehash,
 	    filehash: m.filehash,
@@ -162,7 +154,9 @@ def chats():
         if l_msg["type"] == "chat":
             all_l_msg.append(l_msg["body"])
         elif l_msg["type"] == "image":
-            all_l_msg.append(decrypt_media(l_msg))
+            all_l_msg.append([(l_msg["type"], decrypt_media(l_msg), l_msg["caption"])])
+        elif l_msg["type"] == "video":
+            all_l_msg.append([(l_msg["type"], l_msg["body"], l_msg["caption"])])
         else:
             all_l_msg.append("Not implemented yet")
     
@@ -173,7 +167,7 @@ def chats():
     
     yourname = driver.execute_script("return window.Store.Contact.get(window.Store.User.getMeUser()._serialized).name")
 
-    return render_template("chats.html", contactmsg=contact_msg, yourname=yourname,check64=check64)
+    return render_template("chats.html", contactmsg=contact_msg, yourname=yourname)
 
 @app.route("/processnum", methods=['POST'])
 def process_num():
@@ -200,6 +194,7 @@ def chat_session():
         timestamp: m.t,
         from: m.from,
         type: m.type,
+        caption: m.caption || "",
 	    directPath: m.directPath,
 	    encFilehash: m.encFilehash,
 	    filehash: m.filehash,
@@ -211,9 +206,10 @@ def chat_session():
         if msg["type"] == "chat":
             messages.append(msg["body"])
         elif msg["type"] == "image":
-            messages.append(decrypt_media(msg))           
-
-    #messages = [msg["body"] for msg in msgdata]
+            messages.append([(msg["type"], decrypt_media(msg), msg["caption"])])
+        elif msg["type"] == "video":
+            messages.append([(msg["type"], msg, msg["caption"])])
+           
     who = driver.execute_script("return document.msgdata.map(msg => msg.from._serialized).map(num => window.Store.Contact.get(num).name);")
     time = [datetime.fromtimestamp(timestamp["timestamp"]).time().strftime("%H:%M") for timestamp in msgdata]
 
@@ -225,7 +221,7 @@ def chat_session():
 
     print(who_msg_t)
 
-    return render_template("messages.html", who_msg_t=who_msg_t, num=num, check64=check64)
+    return render_template("messages.html", who_msg_t=who_msg_t, num=num)
 
 @app.route("/send", methods=['POST'])
 def send():
@@ -233,3 +229,30 @@ def send():
     num = request.form.get("num")
     send_message(num,msg_to_send)
     return redirect(url_for("chat_session", num=num))
+
+@app.route("/downmedia", methods=['POST', 'GET'])
+def download_media():
+    if media_download and request.method == 'POST':
+        media_download.clear()
+
+    if not media_download and request.method == 'POST':
+        media = request.form.get("media")
+        media_type = request.form.get("type")
+
+        media_download["type"] = media_type
+        media_download["media"] = media
+
+    if media_download["type"] == "image":
+        file_bytes = base64.b64decode(media_download["media"])
+        response = Response(file_bytes, mimetype="image/jpeg")
+        response.headers["Content-Disposition"] = "attachment; filename=image.jpeg"
+    elif media_download["type"] == "video":
+        media = ast.literal_eval(media_download["media"])
+        file_bytes = base64.b64decode(decrypt_media(media))
+        response = Response(file_bytes, mimetype="video/mp4")
+        response.headers["Content-Disposition"] = "attachment; filename=video.mp4"
+
+    if request.method == 'GET':
+        media_download.clear()
+
+    return response
