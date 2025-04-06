@@ -24,7 +24,10 @@ driver = webdriver.Chrome(options=chrome_options)
 driver.get("https://web.whatsapp.com/")
 
 media_download = {}
+
 def login():
+    if os.path.exists("static/images/qrcode.png"):
+        os.remove("static/images/qrcode.png")
     WebDriverWait(driver,30).until(EC.presence_of_element_located((By.TAG_NAME, 'canvas')))
 
     # this is the qr
@@ -40,10 +43,20 @@ def login():
     with open("static/images/qrcode.png", "wb") as f:
         f.write(canvas_png)
 
+def check_login():
+    if WebDriverWait(driver,60).until(EC.presence_of_element_located((By.CSS_SELECTOR, "[aria-label='Chats']"))):
+        print("hey it works")
+        session["logged_in"] = True
+
 def load_send():
     driver.execute_script("window.Store.User = window.require('WAWebUserPrefsMeUser');")
     driver.execute_script("window.Store.MsgKey = window.require('WAWebMsgKey');")
     driver.execute_script("window.Store.SendMessage = window.require('WAWebSendMsgChatAction');")
+
+def load_msg(num):
+    driver.execute_script(f"document.chat = window.Store.Chat.get('{num}');")
+    driver.execute_script("window.Store.ConversationMsgs = window.require('WAWebChatLoadMessages');")
+    driver.execute_script("await window.Store.ConversationMsgs.loadEarlierMsgs(document.chat);")
 
 def send_message(ids,response):
     driver.execute_script(f"document.chat = window.Store.Chat.get('{ids}');")
@@ -72,10 +85,18 @@ def send_message(ids,response):
 
     driver.execute_script("window.Store.SendMessage.addAndSendMsgToChat(document.chat, document.message)")
 
-def load_msg(num):
-    driver.execute_script(f"document.chat = window.Store.Chat.get('{num}');")
-    driver.execute_script("window.Store.ConversationMsgs = window.require('WAWebChatLoadMessages');")
-    driver.execute_script("await window.Store.ConversationMsgs.loadEarlierMsgs(document.chat);")
+def gather_msg(msgs):
+    messages = []
+    for msg in msgs:
+        if msg["type"] == "chat":
+            messages.append(msg["body"])
+        elif msg["type"] == "image":
+            messages.append([(msg["type"], decrypt_media(msg), msg["caption"])])
+        elif msg["type"] == "video":
+            messages.append(msg)
+        else:
+            messages.append("")
+    return messages
 
 def decrypt_media(msg):
     driver.execute_script(f"""try {{ document.decryptedMedia = await window.Store.DownloadManager.downloadAndMaybeDecrypt({{
@@ -101,7 +122,7 @@ def decrypt_media(msg):
             };
             fileReader.onerror = (e) => reject(e);
             fileReader.readAsDataURL(blob);
-        });""")
+    });""")
 
     base64str = driver.execute_script("if(document.decryptedMedia != undefined) return await document.base64str(document.decryptedMedia)")
 
@@ -110,14 +131,8 @@ def decrypt_media(msg):
 app = Flask(__name__)
 session = {"logged_in": False}
 
-def check_login():
-    if WebDriverWait(driver,60).until(EC.presence_of_element_located((By.CSS_SELECTOR, "[aria-label='Chats']"))):
-        print("hey it works")
-        session["logged_in"] = True
-
 @app.route("/login")
 def hello_world():
-    # by the time this is called its already fully loaded, thats why speed
     login()
     response = render_template('qr.html')
     threading.Thread(target=check_login).start()
@@ -135,7 +150,6 @@ def chats():
     driver.execute_script("window.Store.DownloadManager = window.require('WAWebDownloadManager').downloadManager;")
     contacts = driver.execute_script("return window.Store.Chat.map(contacts => contacts.formattedTitle);")
     
-    all_l_msg = []
     latest_msg = driver.execute_script("""return window.Store.Chat._models.flatMap(chatd => window.Store.Chat.get(chatd.id._serialized).msgs._models.slice(-1).map(m => (    {
         body: m.body,
         timestamp: m.t,
@@ -149,19 +163,7 @@ def chats():
 	    mediaKeyTimestamp: m.mediaKeyTimestamp,
     })));""");
     
-    for l_msg in latest_msg:
-        print(l_msg)
-        if l_msg["type"] == "chat":
-            all_l_msg.append(l_msg["body"])
-        elif l_msg["type"] == "image":
-            all_l_msg.append([(l_msg["type"], decrypt_media(l_msg), l_msg["caption"])])
-        elif l_msg["type"] == "video":
-            all_l_msg.append([(l_msg["type"], l_msg["body"], l_msg["caption"])])
-        else:
-            all_l_msg.append("Not implemented yet")
-    
-    print(all_l_msg)
-
+    all_l_msg = gather_msg(latest_msg)
     load_send()
     contact_msg = dict(zip(contacts,all_l_msg))
     
@@ -182,7 +184,6 @@ def process_num():
 
 @app.route("/chatsession")
 def chat_session():
-    messages = []
     num = request.args.get("num", None)
     if num is None:
         return "<p>No chats available</p>"
@@ -202,14 +203,7 @@ def chat_session():
 	    mediaKeyTimestamp: m.mediaKeyTimestamp,
     }}));""")
 
-    for msg in msgdata:
-        if msg["type"] == "chat":
-            messages.append(msg["body"])
-        elif msg["type"] == "image":
-            messages.append([(msg["type"], decrypt_media(msg), msg["caption"])])
-        elif msg["type"] == "video":
-            messages.append([(msg["type"], msg, msg["caption"])])
-           
+    messages = gather_msg(msgdata)
     who = driver.execute_script("return document.msgdata.map(msg => msg.from._serialized).map(num => window.Store.Contact.get(num).name);")
     time = [datetime.fromtimestamp(timestamp["timestamp"]).time().strftime("%H:%M") for timestamp in msgdata]
 
@@ -246,6 +240,7 @@ def download_media():
         file_bytes = base64.b64decode(media_download["media"])
         response = Response(file_bytes, mimetype="image/jpeg")
         response.headers["Content-Disposition"] = "attachment; filename=image.jpeg"
+
     elif media_download["type"] == "video":
         media = ast.literal_eval(media_download["media"])
         file_bytes = base64.b64decode(decrypt_media(media))
