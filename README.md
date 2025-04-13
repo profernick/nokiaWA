@@ -4,6 +4,7 @@ An attempt to have Whatsapp on old Nokia phones
 
 Self Host this please, for your own safety
 
+Notice: Currently working for older versions of ChromeDriver (tested on  131.0.6778.264 and 125).
 
 
 ## Dependencies
