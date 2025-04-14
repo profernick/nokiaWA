@@ -4,14 +4,17 @@ An attempt to have Whatsapp on old Nokia phones
 
 Self Host this please, for your own safety
 
-Notice: Currently working for older versions of ChromeDriver (tested on  131.0.6778.264 and 125).
-
+Notice: If there is a "SessionNotCreatedException: DevToolsActivePort file doesn't exist" error, or, "selenium.common.exceptions.TimeoutException: Message:" during /login, follow the [Chromedriver Instruction](#chromedriver-instruction)
 
 ## Dependencies
 
 - Python
+
+(pip install)
 - Flask
-- Selenium
+- selenium
+- undetected-chromedriver
+
 ## Usage
 
 ```
@@ -24,12 +27,27 @@ flask --app waweb run
 
 ```
 
-Currently a very early version of the program, lack of features but you can send and read messages (no images yet)
+Currently a very early version of the program, lack of features but you can send and read messages
 
+## Chromedriver Instruction
+Note: Do this only if you face the errors mentioned in notice. Default ChromeDriver should work just fine.
+
+[Chromedriver Linux,Win,Mac](https://googlechromelabs.github.io/chrome-for-testing/#stable)
+
+replace the stable version in the download links with "131.0.6778.264", download both "chrome" and "chromedriver" for your platform
+
+unzip both zip files, for ease of access, move the chromedriver executable to the chrome folder
+
+set the variable chrome_path (in waweb.py) to the full path of your chrome executable
+
+and set the variable chromedriver_path on line (in waweb.py) to the full path of your chromedriver executable
+
+[Chromedriver Termux Android](https://github.com/termux-user-repository/chromium-builder/releases/)
+
+Download release 131.0.6778.264 for your architecture, unzip ,set above mentioned variables to the full path of chrome and chromedriver executables.
 
 ## Roadmap
 
-- Scroll down for older messages
 - Media support
 - And more...
 

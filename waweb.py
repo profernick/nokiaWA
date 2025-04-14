@@ -1,5 +1,5 @@
 from flask import Flask, render_template,redirect,url_for,request, Response
-from selenium import webdriver
+import undetected_chromedriver as uc
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,17 +12,28 @@ import threading
 import os
 import ast
 
-user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
-chrome_options = webdriver.ChromeOptions()
+user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+chrome_options = uc.ChromeOptions()
 
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument('--headless=new')
-chrome_options.add_argument(f'user-agent={user_agent}')
+chrome_options.add_argument("--remote-debugging-port=9222")  # helps fix DevToolsActivePort error
+chrome_options.add_argument("--start-maximized")
+chrome_options.add_argument(f"--user-agent={user_agent}")
 
-driver = webdriver.Chrome(options=chrome_options)
+chrome_path = "" # your chrome path here
+chromedriver_path = "" # your chromedriver path here
+
+if chromedriver_path and chrome_path:
+    chrome_options.binary_location = chrome_path
+    service = Service(executable_path=chromedriver_path)
+    driver = uc.Chrome(service=service,options=chrome_options)
+else:
+    driver = uc.Chrome(options=chrome_options)
+
 driver.get("https://web.whatsapp.com/")
-
+print("Chromedriver Version: ", driver.capabilities["chrome"]["chromedriverVersion"])
 media_download = {}
 session_reload = {}
 def login():
