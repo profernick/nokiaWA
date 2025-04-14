@@ -13,7 +13,7 @@ Notice: If there is a "SessionNotCreatedException: DevToolsActivePort file doesn
 (pip install)
 - Flask
 - selenium
-- undetected-chromedriver
+- undetected_chromedriver
 
 ## Usage
 
