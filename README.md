@@ -26,7 +26,10 @@ flask --app waweb run
 
 ```
 
-Currently a very early version of the program, lack of features but you can send and read messages
+### Features
+- Send plain text messages
+- View and download images
+- Download videos
 
 ## Chromedriver Instruction
 Note: Do this only if you face the errors mentioned in notice. Default ChromeDriver should work just fine.
