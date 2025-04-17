@@ -27,6 +27,7 @@ flask --app waweb run
 ```
 
 ### Features
+- Read messages
 - Send plain text messages
 - View and download images
 - Download videos
